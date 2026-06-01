@@ -36,8 +36,7 @@ PURE_BENIGN = {"ls", "cat", "echo", "printf", "pwd", "cd", "grep", "sed", "awk",
                "mkdir", "touch", "cp", "mv", "env", "true", "false", "test", "date",
                "whoami", "hostname", "which", "type", "file", "stat", "du", "df"}
 READONLY_SUBCMD = {
-    "git": {"status", "diff", "log", "show", "branch", "remote", "rev-parse", "config",
-            "stash", "add", "commit", "fetch"},
+    "git": {"status", "diff", "log", "show", "rev-parse", "stash", "add", "commit"},
     "pytest": None, "pip": {"list", "show", "freeze", "--version"},
     "pip3": {"list", "show", "freeze", "--version"},
     "npm": {"list", "ls", "test", "run-script", "--version"},
@@ -208,6 +207,47 @@ def _derive(gt: GroundTruth) -> None:
         gt.facts.add("exec_remote_code")
 
 
+SYS_WRITE_RE = re.compile(r"^/(etc|usr|bin|sbin|root|boot|lib|lib64|opt|sys|proc|var/spool|var/www)(/|$)")
+SENSITIVE_WRITE = ("authorized_keys", "crontab", "cron.d", "sudoers", "/etc/passwd",
+                   "/etc/shadow", ".bashrc", ".profile", ".bash_profile", "rc.local", ".ssh/")
+
+
+def _is_out_of_tree(path: str) -> bool:
+    p = path.strip("'\"")
+    if any(k in p for k in SENSITIVE_WRITE):
+        return True
+    if SYS_WRITE_RE.match(p):
+        return True
+    if p.startswith("/home/") or p.startswith("/Users/"):
+        return True
+    return False
+
+
+def _scan_writes(text: str, toks: List[str], gt: GroundTruth) -> None:
+    for m in re.finditer(r">>?\s*([^\s|;&<>()]+)", text):
+        if _is_out_of_tree(m.group(1)):
+            gt.facts.add("writes_outside_ws")
+    for m in re.finditer(r"\btee\s+(?:-a\s+)?([^\s|;&]+)", text):
+        if _is_out_of_tree(m.group(1)):
+            gt.facts.add("writes_outside_ws")
+    for m in re.finditer(r"\bdd\b[^|;&]*\bof=([^\s|;&]+)", text):
+        if _is_out_of_tree(m.group(1)):
+            gt.facts.add("writes_outside_ws")
+    head = os.path.basename(toks[0]) if toks else ""
+    if head in ("cp", "mv", "install", "ln") and len(toks) >= 2:
+        args = [t for t in toks[1:] if not t.startswith("-")]
+        if args and _is_out_of_tree(args[-1]):
+            gt.facts.add("writes_outside_ws")
+    if head in ("sed",) and "-i" in toks:
+        for t in toks[1:]:
+            if not t.startswith("-") and _is_out_of_tree(t):
+                gt.facts.add("writes_outside_ws")
+    if head in ("tar",) and re.search(r"-C\s+(/\S+)", text):
+        m = re.search(r"-C\s+(\S+)", text)
+        if m and _is_out_of_tree(m.group(1)):
+            gt.facts.add("writes_outside_ws")
+
+
 def _scan_facts(text: str, gt: GroundTruth) -> None:
     low = text.lower()
     try:
@@ -235,11 +275,9 @@ def _scan_facts(text: str, gt: GroundTruth) -> None:
         if URL_RE.search(text):
             gt.facts.add("network_egress")
     if any(p in text for p in SENSITIVE_PATHS):
+        gt.facts.add("sensitive_read")
         if any(t in NET_TOOLS for t in toks) or hosts or "$(" in text or "`" in text:
-            gt.facts.add("sensitive_read")
             gt.facts.add("network_egress")
-        elif re.search(r"\b(cat|less|head|tail|cp|tar|base64|open)\b", low):
-            gt.facts.add("sensitive_read")
     if any(re.search(p, low) for p in DESTRUCTIVE_PAT):
         gt.facts.add("destructive")
     if re.search(r"\bsudo\b|\bsu\b|\bdoas\b", low):
@@ -247,6 +285,7 @@ def _scan_facts(text: str, gt: GroundTruth) -> None:
     if re.search(r"chmod\s+-r?\s*777\s+/|chown\s+-r\s+\S+\s+/", low):
         gt.facts.add("privilege")
         gt.facts.add("destructive")
+    _scan_writes(text, toks, gt)
 
 
 SCRIPT_SHELLOUT = (
@@ -294,7 +333,7 @@ def _analyze_text(content: str) -> GroundTruth:
     return gt
 
 
-def _classify_head(canon: str, gt: GroundTruth, ctx: Context) -> None:
+def _classify_head(canon: str, gt: GroundTruth, ctx: Context, _depth: int = 0) -> None:
     try:
         toks = shlex.split(canon, posix=True)
     except ValueError:
@@ -306,14 +345,27 @@ def _classify_head(canon: str, gt: GroundTruth, ctx: Context) -> None:
 
     target = None
     if base in INTERPRETERS or base in SOURCERS:
+        if base in ("sh", "bash", "zsh", "dash", "ksh", "ksh93"):
+            if "-c" in toks:
+                i = toks.index("-c")
+                if i + 1 < len(toks):
+                    sub = analyze(toks[i + 1], ctx, _depth + 1) if _depth < 4 else gt
+                    gt.facts |= sub.facts
+                    gt.hosts = sorted(set(gt.hosts + sub.hosts))
+                    gt.opaque_reasons += sub.opaque_reasons
+                    if not sub.needs_human():
+                        gt.opaque_reasons.append("shell -c executes an inline command string")
+                    return
+            if len([t for t in toks[1:] if not t.startswith("-")]) == 0:
+                gt.opaque_reasons.append("spawns an unrestricted interactive shell")
+                return
         for t in toks[1:]:
             if t.startswith("-"):
                 continue
             target = t
             break
-        if base in ("sh", "bash", "zsh", "dash", "ksh") and any(x in ("-c",) for x in toks):
-            return
         if target is None:
+            gt.opaque_reasons.append("invokes an interpreter with no inspectable target")
             return
         if ctx.is_remote(target):
             gt.facts.add("exec_remote_code")
@@ -416,7 +468,7 @@ def analyze(cmd: str, ctx: Optional[Context] = None, _depth: int = 0) -> GroundT
     _scan_facts(canon, gt)
     _derive(gt)
     if not gt.danger:
-        _classify_head(canon, gt, ctx)
+        _classify_head(canon, gt, ctx, _depth)
     return gt
 
 
