@@ -1,0 +1,10 @@
+tldr independent normal-usage corpus: 28798 example commands from 6503 tools
+  no prompt (benign)        :   1168    4.1%
+  PROMPTED (danger+opaque)  :  27630   95.9%
+    uninspectable (opaque)  :  25051   87.0%  (fatigue driver)
+      due to unknown tool   :  24005   83.4%
+    danger fact             :   2579    9.0%  (faithful on consequential examples plus some over-flag)
+
+Interpretation: tldr documents normal idiomatic tool usage, including some
+genuinely consequential commands. The uninspectable rate is the clean fatigue
+proxy: normal usage flagged purely because the tool is not on the trust list.
