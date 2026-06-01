@@ -1,6 +1,6 @@
 # AgentGuard-CI
 
-[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
+[![CI](https://github.com/zjnbwxq/agentguard-ci/actions/workflows/ci.yml/badge.svg)](https://github.com/zjnbwxq/agentguard-ci/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 A proof-of-concept Consent-Integrity mediator for black-box LLM agents.
