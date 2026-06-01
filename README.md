@@ -17,9 +17,14 @@ Consent Integrity for Black-Box LLM Agents*.
 
 ## Files
 
-- `ci.py` — de-obfuscating action analyzer, cross-action session taint, mediator.
-- `corpus.py` — LITL attack corpus, benign controls, TOCTOU pairs, adaptive and
-  multi-stage cases.
+- `ci.py` — de-obfuscating action analyzer that defaults to flagging anything it
+  cannot positively clear as benign, recursive inspection of referenced local
+  script bodies, a session analyzer for write-time content verdicts / locally
+  built artifacts / real remote taint, and the bind-to-execution mediator.
+- `corpus.py` — standard LITL items plus independently constructed cases that
+  target the analyzer (interpreted-script payloads, capability-bearing scripts,
+  opaque binaries, fetch-then-execute), benign inspectable workflows,
+  faithful-prompt cases, and TOCTOU pairs.
 - `evaluate.py` — runs all metrics against the corpus.
 - `results.txt` — captured output of `python evaluate.py`.
 - `tests/` — pytest suite.
@@ -34,6 +39,20 @@ pytest -q                 # run the test suite
 
 The core (`ci.py`, `corpus.py`, `evaluate.py`) has no dependencies beyond the
 Python 3 standard library. `pytest` is only needed to run the tests.
+
+## Results
+
+On the bundled corpus (`python evaluate.py`):
+
+- 22 malicious cases: 17 fully explained, 5 safely flagged, **0 silent approval bypasses**.
+- 10 benign inspectable workflows: **0 false positives**.
+- 4 faithful-prompt cases (remote push, dependency build, configure, privileged install) prompt by design; these carry a real security-relevant fact and are not false positives.
+- TOCTOU post-approval swaps refused: 3/3. Mean overhead ~0.056 ms/action.
+
+The guarantee is analyzer-relative: referenced-content inspection clears a script
+only when its body stays within bounded operations and otherwise flags it, and
+build provenance is trusted at the granularity of the build tool, not its full
+dependency closure. See the paper's Threats to Validity.
 
 ## Scope
 
