@@ -42,17 +42,23 @@ Python 3 standard library. `pytest` is only needed to run the tests.
 
 ## Results
 
-On the bundled corpus (`python evaluate.py`):
+Headline is the **independent** benchmark, GTFOBins, a third-party catalogue of
+trusted-tool abuses not authored for this project (`python benchmarks/gtfobins_eval.py`):
 
-- 22 malicious cases: 17 fully explained, 5 safely flagged, **0 silent approval bypasses**.
-- 10 benign inspectable workflows: **0 false positives**.
-- 4 faithful-prompt cases (remote push, dependency build, configure, privileged install) prompt by design; these carry a real security-relevant fact and are not false positives.
-- TOCTOU post-approval swaps refused: 3/3. Mean overhead ~0.056 ms/action.
+- 1330 abuse commands across 478 binaries: **90.0% flagged** (405 by a danger fact,
+  792 as uninspectable), **10.0% silent pass** — not zero, and every silent pass is
+  through a binary the trust list treats as safe.
+- Residual silent passes: 85 writes under `/tmp` (a deliberate scratch threshold),
+  19 in-tree relative writes (risk caught later by provenance, not at the write),
+  8 benign primitives (`mkdir`/`touch`), 21 genuine long-tail (pager/editor escapes).
+- Implementing the missing `writes_outside_ws` boundary fact moved this from 15.0%
+  to 10.0%. The number is a **position against the current corpus at a version**, not
+  a solved property; security is a treadmill and this reports its rung honestly.
 
-The guarantee is analyzer-relative: referenced-content inspection clears a script
-only when its body stays within bounded operations and otherwise flags it, and
-build provenance is trusted at the granularity of the build tool, not its full
-dependency closure. See the paper's Threats to Validity.
+Controlled co-designed set (`python evaluate.py`): 22 malicious 0 silent / 10 benign
+0 false positives / TOCTOU 3/3 / ~0.05 ms. These are clean *because* the corpus is
+co-designed with the analyzer; trust the GTFOBins figure, not this zero. See the
+paper's Threats to Validity.
 
 ## Scope
 
