@@ -1,0 +1,22 @@
+GTFOBins independent corpus: 1330 abuse commands
+flagged (danger 405 + opaque 792): 1197 = 90.0%
+SILENT PASSES (benign): 133 = 10.0%
+
+by function category:
+  shell                n= 432  danger=  22 opaque= 345 SILENT= 65
+  file-read            n= 250  danger= 214 opaque=  29 SILENT=  7
+  file-write           n= 167  danger=  82 opaque=  68 SILENT= 17
+  inherit              n= 119  danger=   4 opaque= 100 SILENT= 15
+  command              n=  97  danger=   2 opaque=  73 SILENT= 22
+  download             n=  72  danger=  34 opaque=  37 SILENT=  1
+  upload               n=  70  danger=  30 opaque=  39 SILENT=  1
+  reverse-shell        n=  63  danger=   5 opaque=  57 SILENT=  1
+  bind-shell           n=  23  danger=   2 opaque=  20 SILENT=  1
+  privilege-escalation n=  19  danger=   9 opaque=   9 SILENT=  1
+  library-load         n=  18  danger=   1 opaque=  15 SILENT=  2
+
+residual silent-pass breakdown:
+    85  write/op under /tmp (scratch threshold)
+    21  genuine long tail
+    19  in-tree relative write (risk only when later consumed)
+     8  benign primitive
