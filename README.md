@@ -55,6 +55,16 @@ trusted-tool abuses not authored for this project (`python benchmarks/gtfobins_e
   to 10.0%. The number is a **position against the current corpus at a version**, not
   a solved property; security is a treadmill and this reports its rung honestly.
 
+Fatigue axis, second **independent** corpus, tldr-pages normal idiomatic usage
+(`python benchmarks/tldr_eval.py`):
+
+- 28,798 example commands from 6,503 tools: **95.9% prompted, 87.0% uninspectable**
+  (83.4% purely because the tool is not on the trust list); only **4.1% pass without a prompt**.
+- The clean fatigue proxy is the uninspectable rate (some prompted commands are genuinely
+  consequential). The same trust list that holds silent passes to 10% on GTFOBins forces 87%
+  uninspectable on normal usage: shrink it and you get fatigue, grow it and you get silent
+  passes. That trade-off, not a solved defense, is the finding.
+
 Controlled co-designed set (`python evaluate.py`): 22 malicious 0 silent / 10 benign
 0 false positives / TOCTOU 3/3 / ~0.05 ms. These are clean *because* the corpus is
 co-designed with the analyzer; trust the GTFOBins figure, not this zero. See the
