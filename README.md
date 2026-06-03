@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/zjnbwxq/agentguard-ci/actions/workflows/ci.yml/badge.svg)](https://github.com/zjnbwxq/agentguard-ci/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![arXiv](https://img.shields.io/badge/arXiv-2606.02668-b31b1b.svg)](https://arxiv.org/abs/2606.02668)
 
 A proof-of-concept Consent-Integrity mediator for black-box LLM agents.
 
@@ -13,7 +14,21 @@ flagged as uninspectable/high-risk rather than silently approved, so the target
 is zero silent approval bypasses.
 
 This is the artifact for the preprint *What You Approve Is What Executes:
-Consent Integrity for Black-Box LLM Agents*.
+Consent Integrity for Black-Box LLM Agents* ([arXiv:2606.02668](https://arxiv.org/abs/2606.02668)).
+
+## Citation
+
+```bibtex
+@misc{weng2026consentintegrity,
+  author        = {Weng, Xiaoqi},
+  title         = {What You Approve Is What Executes: Consent Integrity for Black-Box LLM Agents},
+  year          = {2026},
+  eprint        = {2606.02668},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CR},
+  url           = {https://arxiv.org/abs/2606.02668}
+}
+```
 
 ## Files
 
@@ -43,7 +58,7 @@ Python 3 standard library. `pytest` is only needed to run the tests.
 ## Results
 
 Headline is the **independent** benchmark, GTFOBins, a third-party catalogue of
-trusted-tool abuses not authored for this project (`python benchmarks/gtfobins_eval.py`):
+trusted-tool abuses not authored for this project (`python gtfobins_eval.py`):
 
 - 1330 abuse commands across 478 binaries: **90.0% flagged** (405 by a danger fact,
   792 as uninspectable), **10.0% silent pass** — not zero, and every silent pass is
@@ -56,7 +71,7 @@ trusted-tool abuses not authored for this project (`python benchmarks/gtfobins_e
   a solved property; security is a treadmill and this reports its rung honestly.
 
 Fatigue axis, second **independent** corpus, tldr-pages normal idiomatic usage
-(`python benchmarks/tldr_eval.py`):
+(`python tldr_eval.py`):
 
 - 28,798 example commands from 6,503 tools: **95.9% prompted, 87.0% uninspectable**
   (83.4% purely because the tool is not on the trust list); only **4.1% pass without a prompt**.
